@@ -73,7 +73,7 @@ class EPhoneField extends StatefulWidget {
   /// The [String] to be used as the initial value of the input field.
   final String? initialValue;
 
-  /// The [String] to be used as title of the country picker menu.
+  /// The [String] to be used as the title of the country picker menu.
   final String? title;
 
   /// The [EdgeInsetsGeometry] to be used as padding of the title of the country picker menu. Defaults to [EdgeInsets.all(8.0)].
@@ -227,7 +227,10 @@ class _EphoneFieldState extends State<EPhoneField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      keyboardType: widget.keyboardTypeOverride ?? _type.keyboardType,
+      // Always use a generic alphanumeric keyboard since the field can accept
+      // either email or phone and we don't want to show the numeric-only
+      // keyboard.
+      keyboardType: TextInputType.text,
       controller: _controller,
       focusNode: _focusNode,
       autovalidateMode: widget.autovalidateMode,
