@@ -10,6 +10,13 @@ class PhoneNumberMaskFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    // If the new value does not start with a digit (e.g. user replaces a phone
+    // number with an email), allow it through unchanged so the field can switch
+    // modes without masking artifacts being introduced.
+    if (newValue.text.isNotEmpty && !RegExp(r'^\d').hasMatch(newValue.text)) {
+      return newValue;
+    }
+
     final String mask = country.mask;
     final String maskCharacter = country.mask[0];
     String text = newValue.text;

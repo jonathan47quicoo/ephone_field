@@ -30,7 +30,7 @@ class EPhoneField extends StatefulWidget {
     this.initialValue,
     this.emptyLabelText = 'Enter Email or Phone Number',
     this.emailLabelText = 'Email',
-    this.phoneLabelText = 'Phone Number',
+    this.phoneLabelText = 'Phone number',
     this.onSaved,
     this.onFieldSubmitted,
     this.decoration = const InputDecoration(
@@ -173,18 +173,14 @@ class _EphoneFieldState extends State<EPhoneField> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   late Country _selectedCountry;
-  late String? Function(String?)? _selectedValidator;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _updateSelectedValidator();
     _selectedCountry = widget.initialCountry;
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    // _controller.addListener(() => _updateTextFieldType());
-    _controller.addListener(() => _updateSelectedValidator());
     _controller.addListener(() {
       if (widget.keyboardTypeOverride == null) {
         _updateTextFieldType(); // only auto-update if no manual override
@@ -222,7 +218,7 @@ class _EphoneFieldState extends State<EPhoneField> {
           labelText: _type.labelText(widget.emptyLabelText,
               widget.emailLabelText, widget.phoneLabelText)),
       validator: _type.validator(
-        _selectedValidator,
+        _selectedValidatorForType(),
         _selectedCountry,
         widget.phoneNumberMaskSplitter,
       ),
@@ -264,43 +260,54 @@ class _EphoneFieldState extends State<EPhoneField> {
       text = text.replaceAll(widget.phoneNumberMaskSplitter!, '');
     }
 
+    final bool startsWithDigit = text.startsWith(RegExp(r'\d'));
+    final bool containsAt = text.contains('@');
+
     EphoneFieldType newType;
     if (text.isEmpty) {
       newType = widget.initialType;
-    } else if (text.startsWith(RegExp(r'\d')) && !text.contains('@')) {
+    } else if (startsWithDigit && !containsAt) {
       // If the input begins with a digit and does not contain an email signifier,
       // treat it as a phone number regardless of any subsequent characters.
       newType = EphoneFieldType.phone;
-    } else if (text.contains('@') || int.tryParse(text) == null) {
+    } else if (containsAt || int.tryParse(text) == null) {
       newType = EphoneFieldType.email;
     } else {
       newType = EphoneFieldType.phone;
     }
 
+    if (newType == EphoneFieldType.phone && startsWithDigit) {
+      final String numericOnly = text.replaceAll(RegExp(r'\D'), '');
+      if (numericOnly != _controller.text) {
+        _controller.value = TextEditingValue(
+          text: numericOnly,
+          selection: TextSelection.collapsed(offset: numericOnly.length),
+        );
+        text = numericOnly;
+      }
+    }
+
     if (newType != _type) {
       setState(() {
         _type = newType;
-        _updateSelectedValidator(); // update validator when type changes
       });
     }
   }
 
-  void _updateSelectedValidator() {
+  String? Function(String?)? _selectedValidatorForType() {
     switch (_type) {
       case EphoneFieldType.initial:
-        _selectedValidator = widget.emptyErrorText == null
+        return widget.emptyErrorText == null
             ? null
             : (value) =>
-        value == null || value.isEmpty ? widget.emptyErrorText : null;
-        break;
+                value == null || value.isEmpty ? widget.emptyErrorText : null;
       case EphoneFieldType.email:
-      // Wrap any provided emailValidator to also enforce the new rule:
-      // - If the value looks like an email (contains '@') and starts with a digit,
-      //   return an error.
-      // - Otherwise, fall back to the user-provided emailValidator if present.
-        _selectedValidator = (value) {
+        // Wrap any provided emailValidator to also enforce:
+        // - If the value looks like an email (contains '@') and starts with a digit,
+        //   return an error.
+        // - Otherwise, fall back to the user-provided emailValidator if present.
+        return (value) {
           if (value != null && value.isNotEmpty && value.contains('@')) {
-            // If the first character is a digit, disallow this email.
             if (RegExp(r'^\d').hasMatch(value)) {
               return 'Email must not start with a number';
             }
@@ -312,10 +319,8 @@ class _EphoneFieldState extends State<EPhoneField> {
 
           return null;
         };
-        break;
       case EphoneFieldType.phone:
-        _selectedValidator = widget.phoneValidator;
-        break;
+        return widget.phoneValidator;
     }
   }
 }
