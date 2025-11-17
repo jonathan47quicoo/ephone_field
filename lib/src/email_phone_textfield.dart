@@ -264,13 +264,32 @@ class _EphoneFieldState extends State<EPhoneField> {
       text = text.replaceAll(widget.phoneNumberMaskSplitter!, '');
     }
 
+    final bool startsWithDigit = text.isNotEmpty && RegExp(r'^\d').hasMatch(text);
+    final bool containsAt = text.contains('@');
+
     EphoneFieldType newType;
     if (text.isEmpty) {
       newType = widget.initialType;
-    } else if (text.contains('@') || int.tryParse(text) == null) {
+    } else if (containsAt) {
       newType = EphoneFieldType.email;
-    } else {
+    } else if (startsWithDigit) {
       newType = EphoneFieldType.phone;
+    } else {
+      newType = EphoneFieldType.email;
+    }
+
+    if (newType == EphoneFieldType.phone) {
+      final String pattern = widget.phoneNumberMaskSplitter == null
+          ? r'[^0-9]'
+          : '[^0-9${RegExp.escape(widget.phoneNumberMaskSplitter!)}]';
+      final String sanitizedText = text.replaceAll(RegExp(pattern), '');
+      if (sanitizedText != text) {
+        _controller.value = _controller.value.copyWith(
+          text: sanitizedText,
+          selection: TextSelection.collapsed(offset: sanitizedText.length),
+        );
+        text = sanitizedText;
+      }
     }
 
     if (newType != _type) {
