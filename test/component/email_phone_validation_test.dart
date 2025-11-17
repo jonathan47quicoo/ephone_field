@@ -83,6 +83,25 @@ void main() {
     expect(find.text('Phone number'), findsOneWidget);
   });
 
+  testWidgets('can return to email mode after phone-like input',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(_buildField());
+
+    await tester.enterText(find.byType(EPhoneField), '123456');
+    await tester.pump();
+
+    expect(find.text('Phone number'), findsOneWidget);
+
+    await tester.enterText(find.byType(EPhoneField), 'user@example.com');
+    await tester.pump();
+
+    formKey.currentState!.validate();
+    await tester.pump();
+
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Enter a valid email address'), findsNothing);
+  });
+
   testWidgets(
       'shows an error when a numeric prefix is added to an existing email',
       (WidgetTester tester) async {
