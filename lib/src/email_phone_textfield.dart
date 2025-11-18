@@ -59,7 +59,7 @@ class EPhoneField extends StatefulWidget {
 
   /// If true, the field will lose focus automatically after the user types the
   /// first character (i.e. when content goes from length 0 -> 1). Defaults to
-  /// `false` (keep focus as usual).
+  /// `true` (the field will unfocus after the first character by default).
   final bool loseFocusAfterOneChar;
 
   /// The [TextEditingController] of the input field.
@@ -187,6 +187,9 @@ class _EphoneFieldState extends State<EPhoneField> {
   late bool _ownsFocusNode;
   // Tracks the previous text length so we can detect a 0 -> 1 transition.
   int _prevTextLength = 0;
+  // Key for the internal TextFormField so we can trigger validation when
+  // external things change (like the selected country).
+  final GlobalKey<FormFieldState<String>> _fieldKey = GlobalKey<FormFieldState<String>>();
 
   @override
   void initState() {
@@ -229,6 +232,7 @@ class _EphoneFieldState extends State<EPhoneField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      key: _fieldKey,
       // Request a plain alphanumeric keyboard by default (we don't assume numeric-only input).
       // Allow callers to override via `keyboardTypeOverride` when a specific layout is desired.
       keyboardType: widget.keyboardTypeOverride ?? TextInputType.text,
@@ -262,6 +266,9 @@ class _EphoneFieldState extends State<EPhoneField> {
         setState(() {
           _selectedCountry = country;
           widget.onCountryChanged?.call(country);
+          // Re-run validation for the field whenever the country changes so
+          // validators that depend on the selected country get evaluated.
+          _fieldKey.currentState?.validate();
           _focusNode.requestFocus();
         });
       },
