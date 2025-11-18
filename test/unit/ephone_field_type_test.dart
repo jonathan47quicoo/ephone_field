@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('should EphoneFieldType keyboardType match successfully', () {
-    expect(EphoneFieldType.email.keyboardType, TextInputType.emailAddress);
-    expect(EphoneFieldType.phone.keyboardType, TextInputType.phone);
+    expect(EphoneFieldType.email.keyboardType, TextInputType.text);
+    expect(EphoneFieldType.phone.keyboardType, TextInputType.text);
     expect(EphoneFieldType.initial.keyboardType, TextInputType.text);
   });
 
