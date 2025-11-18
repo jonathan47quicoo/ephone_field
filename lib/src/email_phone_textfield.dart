@@ -233,9 +233,10 @@ class _EphoneFieldState extends State<EPhoneField> {
   Widget build(BuildContext context) {
     return TextFormField(
       key: _fieldKey,
-      // Request a plain alphanumeric keyboard by default (we don't assume numeric-only input).
-      // Allow callers to override via `keyboardTypeOverride` when a specific layout is desired.
-      keyboardType: widget.keyboardTypeOverride ?? TextInputType.text,
+      // Use the caller override if provided; otherwise use the keyboard type
+      // for the current field type so switching to email mode uses an
+      // email-optimized keyboard layout.
+      keyboardType: widget.keyboardTypeOverride ?? _type.keyboardType,
       controller: _controller,
       focusNode: _focusNode,
       autovalidateMode: widget.autovalidateMode,
@@ -254,7 +255,9 @@ class _EphoneFieldState extends State<EPhoneField> {
           prefixIcon: _type == EphoneFieldType.email ? null : _buildCountryPicker(),
           labelText: _type.labelText(widget.emptyLabelText, widget.emailLabelText, widget.phoneLabelText)),
       validator: _type.validator(_selectedValidatorForType(), _selectedCountry, null),
-      inputFormatters: widget.inputFormatters ?? _type.inputFormatters(_selectedCountry, null),
+      // Make sure the phone/email-aware formatter receives the configured
+      // mask splitter so switching to email updates formatters correctly.
+      inputFormatters: widget.inputFormatters ?? _type.inputFormatters(_selectedCountry, widget.phoneNumberMaskSplitter),
     );
   }
 
