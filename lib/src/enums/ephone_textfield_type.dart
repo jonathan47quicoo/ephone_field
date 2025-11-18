@@ -16,12 +16,12 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       case EphoneFieldType.email:
         // Keep a consistent alphanumeric keyboard even when entering emails to
         // avoid triggering numeric or phone-specific layouts.
-        return TextInputType.text;
+        return TextInputType.email;
       case EphoneFieldType.phone:
-        return TextInputType.text;
+        return TextInputType.email;
       case EphoneFieldType.initial:
       default:
-        return TextInputType.text;
+        return TextInputType.email;
     }
   }
 
