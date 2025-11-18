@@ -185,11 +185,14 @@ class _EphoneFieldState extends State<EPhoneField> {
   late Country _selectedCountry;
   late bool _ownsController;
   late bool _ownsFocusNode;
+
   // Tracks the previous text length so we can detect a 0 -> 1 transition.
   int _prevTextLength = 0;
+
   // Key for the internal TextFormField so we can trigger validation when
   // external things change (like the selected country).
-  final GlobalKey<FormFieldState<String>> _fieldKey = GlobalKey<FormFieldState<String>>();
+  final GlobalKey<FormFieldState<String>> _fieldKey =
+      GlobalKey<FormFieldState<String>>();
 
   @override
   void initState() {
@@ -252,12 +255,19 @@ class _EphoneFieldState extends State<EPhoneField> {
       // initialValue: widget.initialValue,
       decoration: widget.decoration.copyWith(
           // Hide the country picker when the field is in email mode.
-          prefixIcon: _type == EphoneFieldType.email || _type == EphoneFieldType.initial? null : _buildCountryPicker(),
-          labelText: _type.labelText(widget.emptyLabelText, widget.emailLabelText, widget.phoneLabelText)),
-      validator: _type.validator(_selectedValidatorForType(), _selectedCountry, null),
+          prefixIcon:
+              _type == EphoneFieldType.email || _type == EphoneFieldType.initial
+                  ? null
+                  : _buildCountryPicker(),
+          labelText: _type.labelText(widget.emptyLabelText,
+              widget.emailLabelText, widget.phoneLabelText)),
+      validator:
+          _type.validator(_selectedValidatorForType(), _selectedCountry, null),
       // Make sure the phone/email-aware formatter receives the configured
       // mask splitter so switching to email updates formatters correctly.
-      inputFormatters: widget.inputFormatters ?? _type.inputFormatters(_selectedCountry, widget.phoneNumberMaskSplitter),
+      inputFormatters: widget.inputFormatters ??
+          _type.inputFormatters(
+              _selectedCountry, widget.phoneNumberMaskSplitter),
     );
   }
 
@@ -311,7 +321,8 @@ class _EphoneFieldState extends State<EPhoneField> {
 
     final bool shouldBeEmail = hasLetter || hasEmailSymbol;
 
-    final EphoneFieldType newType = shouldBeEmail ? EphoneFieldType.email : EphoneFieldType.initial;
+    final EphoneFieldType newType =
+        shouldBeEmail ? EphoneFieldType.email : EphoneFieldType.initial;
 
     if (newType != _type) {
       setState(() {
@@ -325,10 +336,13 @@ class _EphoneFieldState extends State<EPhoneField> {
       case EphoneFieldType.initial:
         return widget.emptyErrorText == null
             ? null
-            : (value) => value == null || value.isEmpty ? widget.emptyErrorText : null;
+            : (value) =>
+                value == null || value.isEmpty ? widget.emptyErrorText : null;
       case EphoneFieldType.email:
         // Use any provided emailValidator directly. Emails starting with digits
         // are allowed (e.g., "123user@example.com").
+        return widget.emailValidator;
+      case EphoneFieldType.phone:
         return widget.emailValidator;
     }
   }

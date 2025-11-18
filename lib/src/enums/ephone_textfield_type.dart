@@ -5,7 +5,7 @@ import '../formatters/phone_number_digits_only_formatter.dart';
 import '../formatters/phone_or_email_formatter.dart';
 
 /// This enum is used to set the type of the [EphoneField]
-enum EphoneFieldType { initial, email }
+enum EphoneFieldType { initial, email, phone }
 
 /// This extension is used to get the type of the [EphoneField]
 /// based on the [EphoneFieldType] enum
@@ -16,6 +16,8 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       case EphoneFieldType.initial:
         return TextInputType.text;
       case EphoneFieldType.email:
+        return TextInputType.emailAddress;
+      case EphoneFieldType.phone:
         return TextInputType.emailAddress;
     }
   }
@@ -31,8 +33,13 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       case EphoneFieldType.initial:
         // Use a single composite formatter that preserves email-like input and
         // otherwise applies phone mask + digits-only filtering.
-        return [PhoneOrEmailFormatter(country: country, maskSplitCharacter: maskSplitCharacter)];
+        return [
+          PhoneOrEmailFormatter(
+              country: country, maskSplitCharacter: maskSplitCharacter)
+        ];
       case EphoneFieldType.email:
+        return [];
+      case EphoneFieldType.phone:
         return [];
     }
   }
@@ -47,6 +54,8 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       case EphoneFieldType.email:
         return emailLabelText;
       // no phone case
+      case EphoneFieldType.phone:
+        return emailLabelText;
     }
   }
 
@@ -59,6 +68,8 @@ extension EPhoneTextFielExtension on EphoneFieldType {
         return typeValidator;
       case EphoneFieldType.email:
         return typeValidator;
+      case EphoneFieldType.phone:
+        return typeValidator;
     }
   }
 
@@ -69,6 +80,8 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       case EphoneFieldType.initial:
         return onFieldSubmitted;
       case EphoneFieldType.email:
+        return onFieldSubmitted;
+      case EphoneFieldType.phone:
         return onFieldSubmitted;
     }
   }
@@ -81,6 +94,8 @@ extension EPhoneTextFielExtension on EphoneFieldType {
         return onSaved;
       case EphoneFieldType.email:
         return onSaved;
+      case EphoneFieldType.phone:
+        return onSaved;
     }
   }
 
@@ -91,6 +106,8 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       case EphoneFieldType.initial:
         return onChanged;
       case EphoneFieldType.email:
+        return onChanged;
+      case EphoneFieldType.phone:
         return onChanged;
     }
   }
