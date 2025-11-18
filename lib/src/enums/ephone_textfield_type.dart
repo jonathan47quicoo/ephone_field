@@ -11,19 +11,7 @@ enum EphoneFieldType { initial, email, phone }
 /// based on the [EphoneFieldType] enum
 extension EPhoneTextFielExtension on EphoneFieldType {
   /// Returns the keyboard type of the [EphoneField] based on the [EphoneFieldType] enum
-  TextInputType get keyboardType {
-    switch (this) {
-      case EphoneFieldType.email:
-        // Keep a consistent alphanumeric keyboard even when entering emails to
-        // avoid triggering numeric or phone-specific layouts.
-        return TextInputType.email;
-      case EphoneFieldType.phone:
-        return TextInputType.email;
-      case EphoneFieldType.initial:
-      default:
-        return TextInputType.email;
-    }
-  }
+  TextInputType get keyboardType => TextInputType.emailAddress;
 
 
   /// Returns the input formatters of the [EphoneField] based on the [EphoneFieldType] enum

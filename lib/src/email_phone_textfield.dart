@@ -223,11 +223,8 @@ class _EphoneFieldState extends State<EPhoneField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      // Always use a generic alphanumeric keyboard since the field can accept
-      // either email or phone and we don't want to show the numeric-only
-      // keyboard. Allow callers to override if they need to force a specific
-      // layout.
-      keyboardType: widget.keyboardTypeOverride ?? TextInputType.text,
+      // Always request the email keyboard layout so the keypad stays consistent.
+      keyboardType: TextInputType.emailAddress,
       controller: _controller,
       focusNode: _focusNode,
       autovalidateMode: widget.autovalidateMode,
