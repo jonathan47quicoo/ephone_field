@@ -287,7 +287,8 @@ class _EphoneFieldState extends State<EPhoneField> {
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    // New behavior: if the field contains any alphanumeric character (letter or digit)
+    // New behavior: if the field contains any alphabetic or email-like character
+    // (letter or characters commonly used in emails such as @ . _ - +)
     // we treat it as an email field. Empty text falls back to the initialType.
     final String text = _controller.text;
 
@@ -302,12 +303,12 @@ class _EphoneFieldState extends State<EPhoneField> {
       return;
     }
 
-    // If any alphanumeric character (A-Z, a-z, 0-9) is present anywhere in the
-    // input, treat the field as an email. Otherwise (no alphanumeric chars)
+    // If any alphabetic character or email-like symbol is present anywhere in
+    // the input, treat the field as an email. Otherwise (no such chars)
     // treat as phone (keep country picker visible).
-    final bool hasAlphanumeric = RegExp(r'[A-Za-z0-9]').hasMatch(text);
+    final bool hasEmailLike = RegExp(r'[A-Za-z@._\-+]').hasMatch(text);
 
-    final EphoneFieldType newType = hasAlphanumeric ? EphoneFieldType.email : EphoneFieldType.initial;
+    final EphoneFieldType newType = hasEmailLike ? EphoneFieldType.email : EphoneFieldType.initial;
 
     if (newType != _type) {
       setState(() {
