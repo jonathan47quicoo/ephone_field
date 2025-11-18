@@ -287,13 +287,12 @@ class _EphoneFieldState extends State<EPhoneField> {
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    // New behavior: if the field contains any alphabetic or email-like character
-    // (letter or characters commonly used in emails such as @ . _ - +)
-    // we treat it as an email field. Empty text falls back to the initialType.
+    // Behavior: if the field contains any alphabetic character or email-like
+    // symbol (such as @ . _ - +) we treat it as an email field. Empty text
+    // falls back to the initialType.
     final String text = _controller.text;
 
     if (text.isEmpty) {
-      // Preserve initial empty behavior.
       final EphoneFieldType newType = widget.initialType;
       if (newType != _type) {
         setState(() {
@@ -303,12 +302,13 @@ class _EphoneFieldState extends State<EPhoneField> {
       return;
     }
 
-    // If any alphabetic character or email-like symbol is present anywhere in
-    // the input, treat the field as an email. Otherwise (no such chars)
-    // treat as phone (keep country picker visible).
-    final bool hasEmailLike = RegExp(r'[A-Za-z@._\-+]').hasMatch(text);
+    // Explicit checks: letters OR email symbols trigger email mode. Digits alone do not.
+    final bool hasLetter = RegExp(r'[A-Za-z]').hasMatch(text);
+    final bool hasEmailSymbol = RegExp(r'[@._\-+]').hasMatch(text);
 
-    final EphoneFieldType newType = hasEmailLike ? EphoneFieldType.email : EphoneFieldType.initial;
+    final bool shouldBeEmail = hasLetter || hasEmailSymbol;
+
+    final EphoneFieldType newType = shouldBeEmail ? EphoneFieldType.email : EphoneFieldType.initial;
 
     if (newType != _type) {
       setState(() {
