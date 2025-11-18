@@ -287,23 +287,27 @@ class _EphoneFieldState extends State<EPhoneField> {
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    // Determine whether the field should behave like a phone or email input.
-    // Requirement: If the user starts with a numeric character and continues
-    // typing only numeric characters, we assume a phone number is being
-    // entered and keep the country picker visible. As soon as an alphabetic
-    // or special character is entered, we assume an email and hide the
-    // country picker.
+    // New behavior: if the field contains any alphanumeric character (letter or digit)
+    // we treat it as an email field. Empty text falls back to the initialType.
     final String text = _controller.text;
-    final bool startsWithDigit = RegExp(r'^\d').hasMatch(text);
-    final bool isAllDigits = RegExp(r'^\d+$').hasMatch(text);
 
-    final bool shouldShowPhone = text.isNotEmpty && startsWithDigit && isAllDigits;
+    if (text.isEmpty) {
+      // Preserve initial empty behavior.
+      final EphoneFieldType newType = widget.initialType;
+      if (newType != _type) {
+        setState(() {
+          _type = newType;
+        });
+      }
+      return;
+    }
 
-    final EphoneFieldType newType = text.isEmpty
-        ? widget.initialType
-        : shouldShowPhone
-            ? EphoneFieldType.initial
-            : EphoneFieldType.email;
+    // If any alphanumeric character (A-Z, a-z, 0-9) is present anywhere in the
+    // input, treat the field as an email. Otherwise (no alphanumeric chars)
+    // treat as phone (keep country picker visible).
+    final bool hasAlphanumeric = RegExp(r'[A-Za-z0-9]').hasMatch(text);
+
+    final EphoneFieldType newType = hasAlphanumeric ? EphoneFieldType.email : EphoneFieldType.initial;
 
     if (newType != _type) {
       setState(() {
