@@ -14,14 +14,14 @@ extension EPhoneTextFielExtension on EphoneFieldType {
   TextInputType get keyboardType {
     switch (this) {
       case EphoneFieldType.email:
-        return TextInputType.emailAddress;
+        // Keep a consistent alphanumeric keyboard even when entering emails to
+        // avoid triggering numeric or phone-specific layouts.
+        return TextInputType.email;
       case EphoneFieldType.phone:
-        // Use a generic alphanumeric keyboard even for phone mode to keep the
-        // input consistent with email/phone switching.
-        return TextInputType.text;
+        return TextInputType.email;
       case EphoneFieldType.initial:
       default:
-        return TextInputType.text;
+        return TextInputType.email;
     }
   }
 
