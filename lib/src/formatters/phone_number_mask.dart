@@ -10,14 +10,32 @@ class PhoneNumberMaskFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    // If the new value does not start with a digit (e.g. user replaces a phone
-    // number with an email), or if it contains letters or common email
-    // characters, allow it through unchanged so the field can switch modes
-    // without masking artifacts. This ensures typing a letter after starting
-    // with a digit (e.g. '7' then 'a') is preserved and not stripped.
-    if (newValue.text.isNotEmpty &&
-        (!RegExp(r'^\d').hasMatch(newValue.text) || newValue.text.contains(RegExp(r'[A-Za-z@._\-+]')))) {
-      return newValue;
+    if (newValue.text.isNotEmpty) {
+      final RegExp emailLike = RegExp(r'[A-Za-z@._\-+]');
+      final bool startsWithDigit = RegExp(r'^\d').hasMatch(newValue.text);
+      final bool containsEmailLike = newValue.text.contains(emailLike);
+      final bool oldHadEmailLike = oldValue.text.contains(emailLike);
+
+      // If the text clearly isn't a phone, or contains email-like characters,
+      // or the user just typed the first email-like char (difference insertion),
+      // allow it through unchanged.
+      if (!startsWithDigit || containsEmailLike || (!oldHadEmailLike && containsEmailLike)) {
+        return newValue;
+      }
+
+      // Also detect a simple insertion where the length increased and the newly
+      // inserted substring contains an email-like character (handles '7' -> '7a').
+      if (newValue.text.length > oldValue.text.length) {
+        int diffIndex = 0;
+        while (diffIndex < oldValue.text.length && diffIndex < newValue.text.length &&
+            oldValue.text[diffIndex] == newValue.text[diffIndex]) {
+          diffIndex++;
+        }
+        final String inserted = newValue.text.substring(diffIndex);
+        if (inserted.contains(emailLike) && !oldHadEmailLike) {
+          return newValue;
+        }
+      }
     }
 
     final String mask = country.mask;

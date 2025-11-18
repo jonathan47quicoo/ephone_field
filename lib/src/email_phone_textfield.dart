@@ -250,7 +250,8 @@ class _EphoneFieldState extends State<EPhoneField> {
       ),
       // initialValue: widget.initialValue,
       decoration: widget.decoration.copyWith(
-          prefixIcon: _buildCountryPicker(),
+          // Hide the country picker when the field is in email mode.
+          prefixIcon: _type == EphoneFieldType.email ? null : _buildCountryPicker(),
           labelText: _type.labelText(widget.emptyLabelText, widget.emailLabelText, widget.phoneLabelText)),
       validator: _type.validator(_selectedValidatorForType(), _selectedCountry, null),
       inputFormatters: widget.inputFormatters ?? _type.inputFormatters(_selectedCountry, null),
@@ -286,13 +287,21 @@ class _EphoneFieldState extends State<EPhoneField> {
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    // Simplified: only determine email vs initial based on presence of '@'.
+    // Determine email vs initial. Switch to email mode when the input
+    // contains an '@' or any alphabetic character or common email symbols
+    // (dot, underscore, plus). If the input is only numeric (and optional
+    // mask splitters), remain in the initial (phone) mode so the country
+    // picker is available.
     final String text = _controller.text;
     final bool containsAt = text.contains('@');
+    final bool containsAlpha = RegExp(r'[A-Za-z]').hasMatch(text);
+    final bool containsEmailChars = RegExp(r'[._+]').hasMatch(text);
+
+    final bool isEmailLike = containsAt || containsAlpha || containsEmailChars;
 
     final EphoneFieldType newType = text.isEmpty
         ? widget.initialType
-        : (containsAt ? EphoneFieldType.email : EphoneFieldType.initial);
+        : (isEmailLike ? EphoneFieldType.email : EphoneFieldType.initial);
 
     if (newType != _type) {
       setState(() {

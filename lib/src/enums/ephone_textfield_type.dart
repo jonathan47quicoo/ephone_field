@@ -1,5 +1,8 @@
 import 'package:flutter/services.dart';
 import 'country.dart';
+import '../formatters/phone_number_mask.dart';
+import '../formatters/phone_number_digits_only_formatter.dart';
+import '../formatters/phone_or_email_formatter.dart';
 
 /// This enum is used to set the type of the [EphoneField]
 enum EphoneFieldType { initial, email }
@@ -26,7 +29,9 @@ extension EPhoneTextFielExtension on EphoneFieldType {
       Country country, String? maskSplitCharacter) {
     switch (this) {
       case EphoneFieldType.initial:
-        return [];
+        // Use a single composite formatter that preserves email-like input and
+        // otherwise applies phone mask + digits-only filtering.
+        return [PhoneOrEmailFormatter(country: country, maskSplitCharacter: maskSplitCharacter)];
       case EphoneFieldType.email:
         return [];
     }
