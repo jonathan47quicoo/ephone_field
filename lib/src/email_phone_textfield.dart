@@ -45,8 +45,14 @@ class EPhoneField extends StatefulWidget {
     this.emptyErrorText,
     this.countryPickerButtonWidth = 108.0,
     this.autovalidateMode,
+    this.keyboardTypeOverride,
     this.loseFocusAfterOneChar = true,
   }) : super(key: key);
+
+  /// Optional override for the keyboard type used by the text field.
+  /// If null, the widget will request an alphanumeric keyboard ([TextInputType.text])
+  /// so the user can enter email or phone characters without forcing a numeric keypad.
+  final TextInputType? keyboardTypeOverride;
 
   /// The [FocusNode] of the input field.
   final FocusNode? focusNode;
@@ -223,8 +229,9 @@ class _EphoneFieldState extends State<EPhoneField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      // Always request the email keyboard layout so the keypad stays consistent.
-      keyboardType: TextInputType.emailAddress,
+      // Request a plain alphanumeric keyboard by default (we don't assume numeric-only input).
+      // Allow callers to override via `keyboardTypeOverride` when a specific layout is desired.
+      keyboardType: widget.keyboardTypeOverride ?? TextInputType.text,
       controller: _controller,
       focusNode: _focusNode,
       autovalidateMode: widget.autovalidateMode,
@@ -239,24 +246,17 @@ class _EphoneFieldState extends State<EPhoneField> {
       ),
       // initialValue: widget.initialValue,
       decoration: widget.decoration.copyWith(
-          prefixIcon: _buildCountryPicker(_type == EphoneFieldType.phone),
-          labelText: _type.labelText(widget.emptyLabelText,
-              widget.emailLabelText, widget.phoneLabelText)),
-      validator: _type.validator(
-        _selectedValidatorForType(),
-        _selectedCountry,
-        widget.phoneNumberMaskSplitter,
-      ),
-      inputFormatters: widget.inputFormatters ??
-          _type.inputFormatters(
-              _selectedCountry, widget.phoneNumberMaskSplitter),
+          prefixIcon: _buildCountryPicker(),
+          labelText: _type.labelText(widget.emptyLabelText, widget.emailLabelText, widget.phoneLabelText)),
+      validator: _type.validator(_selectedValidatorForType(), _selectedCountry, null),
+      inputFormatters: widget.inputFormatters ?? _type.inputFormatters(_selectedCountry, null),
     );
   }
 
-  /// Builds the [CountryPickerButton] if the [_type] is [EphoneFieldType.phone].
-  Widget? _buildCountryPicker(bool isPhoneFieldSelected) {
-    return isPhoneFieldSelected
-        ? CountryPickerButton(
+  /// Builds the [CountryPickerButton].
+  /// Note: country picker is retained but not tied to a "phone" mode.
+  Widget? _buildCountryPicker() {
+    return CountryPickerButton(
       initialValue: _selectedCountry,
       onValuePicked: (Country country) {
         setState(() {
@@ -274,43 +274,18 @@ class _EphoneFieldState extends State<EPhoneField> {
       width: widget.countryPickerButtonWidth,
       icon: widget.countryPickerButtonIcon,
       pickerHeight: widget.pickerHeight,
-    )
-        : null;
+    );
   }
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    String text = _controller.text;
-    if (widget.phoneNumberMaskSplitter != null) {
-      text = text.replaceAll(widget.phoneNumberMaskSplitter!, '');
-    }
-
-    final bool startsWithDigit = text.startsWith(RegExp(r'\d'));
+    // Simplified: only determine email vs initial based on presence of '@'.
+    final String text = _controller.text;
     final bool containsAt = text.contains('@');
 
-    EphoneFieldType newType;
-    if (text.isEmpty) {
-      newType = widget.initialType;
-    } else if (startsWithDigit && !containsAt) {
-      // If the input begins with a digit and does not contain an email signifier,
-      // treat it as a phone number regardless of any subsequent characters.
-      newType = EphoneFieldType.phone;
-    } else if (containsAt || int.tryParse(text) == null) {
-      newType = EphoneFieldType.email;
-    } else {
-      newType = EphoneFieldType.phone;
-    }
-
-    if (newType == EphoneFieldType.phone && startsWithDigit) {
-      final String numericOnly = text.replaceAll(RegExp(r'\D'), '');
-      if (numericOnly != _controller.text) {
-        _controller.value = TextEditingValue(
-          text: numericOnly,
-          selection: TextSelection.collapsed(offset: numericOnly.length),
-        );
-        text = numericOnly;
-      }
-    }
+    final EphoneFieldType newType = text.isEmpty
+        ? widget.initialType
+        : (containsAt ? EphoneFieldType.email : EphoneFieldType.initial);
 
     if (newType != _type) {
       setState(() {
@@ -324,13 +299,9 @@ class _EphoneFieldState extends State<EPhoneField> {
       case EphoneFieldType.initial:
         return widget.emptyErrorText == null
             ? null
-            : (value) =>
-                value == null || value.isEmpty ? widget.emptyErrorText : null;
+            : (value) => value == null || value.isEmpty ? widget.emptyErrorText : null;
       case EphoneFieldType.email:
-        // Wrap any provided emailValidator to also enforce:
-        // - If the value looks like an email (contains '@') and starts with a digit,
-        //   return an error.
-        // - Otherwise, fall back to the user-provided emailValidator if present.
+        // Wrap any provided emailValidator to also enforce that an email does not start with a digit.
         return (value) {
           if (value != null && value.isNotEmpty && value.contains('@')) {
             if (RegExp(r'^\d').hasMatch(value)) {
@@ -344,8 +315,6 @@ class _EphoneFieldState extends State<EPhoneField> {
 
           return null;
         };
-      case EphoneFieldType.phone:
-        return widget.phoneValidator;
     }
   }
 }
