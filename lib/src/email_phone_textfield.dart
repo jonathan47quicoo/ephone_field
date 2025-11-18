@@ -45,13 +45,11 @@ class EPhoneField extends StatefulWidget {
     this.emptyErrorText,
     this.countryPickerButtonWidth = 108.0,
     this.autovalidateMode,
-    this.keyboardTypeOverride,
     this.loseFocusAfterOneChar = true,
   }) : super(key: key);
 
   /// The [FocusNode] of the input field.
   final FocusNode? focusNode;
-  final TextInputType? keyboardTypeOverride;
 
   /// If true, the field will lose focus automatically after the user types the
   /// first character (i.e. when content goes from length 0 -> 1). Defaults to
@@ -197,9 +195,7 @@ class _EphoneFieldState extends State<EPhoneField> {
       final currentText = _controller.text;
       final currentLength = currentText.length;
 
-      if (widget.keyboardTypeOverride == null) {
-        _updateTextFieldType(); // only auto-update if no manual override
-      }
+      _updateTextFieldType();
 
       // If requested, lose focus when the user types the first character
       // (transition from length 0 -> 1).
@@ -227,10 +223,8 @@ class _EphoneFieldState extends State<EPhoneField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      // Always use a generic alphanumeric keyboard since the field can accept
-      // either email or phone and we don't want to show the numeric-only
-      // keyboard.
-      keyboardType: TextInputType.text,
+      // Always request the email keyboard layout so the keypad stays consistent.
+      keyboardType: TextInputType.emailAddress,
       controller: _controller,
       focusNode: _focusNode,
       autovalidateMode: widget.autovalidateMode,
