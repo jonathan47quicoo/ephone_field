@@ -11,9 +11,12 @@ class PhoneNumberMaskFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     // If the new value does not start with a digit (e.g. user replaces a phone
-    // number with an email), allow it through unchanged so the field can switch
-    // modes without masking artifacts being introduced.
-    if (newValue.text.isNotEmpty && !RegExp(r'^\d').hasMatch(newValue.text)) {
+    // number with an email), or if it contains letters or common email
+    // characters, allow it through unchanged so the field can switch modes
+    // without masking artifacts. This ensures typing a letter after starting
+    // with a digit (e.g. '7' then 'a') is preserved and not stripped.
+    if (newValue.text.isNotEmpty &&
+        (!RegExp(r'^\d').hasMatch(newValue.text) || newValue.text.contains(RegExp(r'[A-Za-z@._\-+]')))) {
       return newValue;
     }
 
