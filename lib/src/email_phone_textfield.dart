@@ -287,21 +287,23 @@ class _EphoneFieldState extends State<EPhoneField> {
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    // Determine email vs initial. Switch to email mode when the input
-    // contains an '@' or any alphabetic character or common email symbols
-    // (dot, underscore, plus). If the input is only numeric (and optional
-    // mask splitters), remain in the initial (phone) mode so the country
-    // picker is available.
+    // Determine whether the field should behave like a phone or email input.
+    // Requirement: If the user starts with a numeric character and continues
+    // typing only numeric characters, we assume a phone number is being
+    // entered and keep the country picker visible. As soon as an alphabetic
+    // or special character is entered, we assume an email and hide the
+    // country picker.
     final String text = _controller.text;
-    final bool containsAt = text.contains('@');
-    final bool containsAlpha = RegExp(r'[A-Za-z]').hasMatch(text);
-    final bool containsEmailChars = RegExp(r'[._+]').hasMatch(text);
+    final bool startsWithDigit = RegExp(r'^\d').hasMatch(text);
+    final bool isAllDigits = RegExp(r'^\d+$').hasMatch(text);
 
-    final bool isEmailLike = containsAt || containsAlpha || containsEmailChars;
+    final bool shouldShowPhone = text.isNotEmpty && startsWithDigit && isAllDigits;
 
     final EphoneFieldType newType = text.isEmpty
         ? widget.initialType
-        : (isEmailLike ? EphoneFieldType.email : EphoneFieldType.initial);
+        : shouldShowPhone
+            ? EphoneFieldType.initial
+            : EphoneFieldType.email;
 
     if (newType != _type) {
       setState(() {
