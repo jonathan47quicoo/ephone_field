@@ -46,7 +46,7 @@ class EPhoneField extends StatefulWidget {
     this.countryPickerButtonWidth = 108.0,
     this.autovalidateMode,
     this.keyboardTypeOverride,
-    this.loseFocusAfterOneChar = true,
+    this.loseFocusAfterOneChar = false,
   }) : super(key: key);
 
   /// Optional override for the keyboard type used by the text field.
@@ -59,7 +59,7 @@ class EPhoneField extends StatefulWidget {
 
   /// If true, the field will lose focus automatically after the user types the
   /// first character (i.e. when content goes from length 0 -> 1). Defaults to
-  /// `true` (the field will unfocus after the first character by default).
+  /// `false` (the field will not unfocus after the first character by default).
   final bool loseFocusAfterOneChar;
 
   /// The [TextEditingController] of the input field.
@@ -308,20 +308,9 @@ class _EphoneFieldState extends State<EPhoneField> {
             ? null
             : (value) => value == null || value.isEmpty ? widget.emptyErrorText : null;
       case EphoneFieldType.email:
-        // Wrap any provided emailValidator to also enforce that an email does not start with a digit.
-        return (value) {
-          if (value != null && value.isNotEmpty && value.contains('@')) {
-            if (RegExp(r'^\d').hasMatch(value)) {
-              return 'Email must not start with a number';
-            }
-          }
-
-          if (widget.emailValidator != null) {
-            return widget.emailValidator!(value);
-          }
-
-          return null;
-        };
+        // Use any provided emailValidator directly. Emails starting with digits
+        // are allowed (e.g., "123user@example.com").
+        return widget.emailValidator;
     }
   }
 }

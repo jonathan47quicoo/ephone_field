@@ -7,15 +7,16 @@ class PhoneNumberDigistOnlyFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    // If the new value no longer starts with a digit (e.g., the user replaced a
-    // numeric phone entry with an email), allow the text through so the field
-    // can switch back to email mode.
-    if (newValue.text.isNotEmpty && !RegExp(r'^\d').hasMatch(newValue.text)) {
+    // If the new value clearly looks like an email/username (contains letters
+    // or typical email characters), allow it through so the user can type
+    // letters after starting with digits (e.g., "123abc@example.com").
+    if (newValue.text.isNotEmpty && newValue.text.contains(RegExp(r'[A-Za-z@._\-+]'))) {
       return newValue;
     }
 
-    // Remove all non-digits characters without mask split character from the input string
-    final String newText = newValue.text.replaceAll(RegExp('[^0-9$maskSplitCharacter]'), '');
+    // Otherwise strip all characters except digits and the optional mask splitter
+    // so phone-entry behavior still works when the input is purely numeric.
+    final String newText = newValue.text.replaceAll(RegExp('[^0-9${maskSplitCharacter ?? ''}]'), '');
     final int selectionIndex = newText.length;
 
     return TextEditingValue(
