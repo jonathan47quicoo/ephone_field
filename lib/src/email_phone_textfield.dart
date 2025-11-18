@@ -46,16 +46,20 @@ class EPhoneField extends StatefulWidget {
     this.countryPickerButtonWidth = 108.0,
     this.autovalidateMode,
     this.keyboardTypeOverride,
-    this.loseFocusAfterOneChar = true,
+    this.loseFocusAfterOneChar = false,
   }) : super(key: key);
+
+  /// Optional override for the keyboard type used by the text field.
+  /// If null, the widget will request an alphanumeric keyboard ([TextInputType.text])
+  /// so the user can enter email or phone characters without forcing a numeric keypad.
+  final TextInputType? keyboardTypeOverride;
 
   /// The [FocusNode] of the input field.
   final FocusNode? focusNode;
-  final TextInputType? keyboardTypeOverride;
 
   /// If true, the field will lose focus automatically after the user types the
   /// first character (i.e. when content goes from length 0 -> 1). Defaults to
-  /// `false` (keep focus as usual).
+  /// `false` (the field will not unfocus after the first character by default).
   final bool loseFocusAfterOneChar;
 
   /// The [TextEditingController] of the input field.
@@ -73,7 +77,7 @@ class EPhoneField extends StatefulWidget {
   /// The [String] to be used as the initial value of the input field.
   final String? initialValue;
 
-  /// The [String] to be used as title of the country picker menu.
+  /// The [String] to be used as the title of the country picker menu.
   final String? title;
 
   /// The [EdgeInsetsGeometry] to be used as padding of the title of the country picker menu. Defaults to [EdgeInsets.all(8.0)].
@@ -181,8 +185,14 @@ class _EphoneFieldState extends State<EPhoneField> {
   late Country _selectedCountry;
   late bool _ownsController;
   late bool _ownsFocusNode;
+
   // Tracks the previous text length so we can detect a 0 -> 1 transition.
   int _prevTextLength = 0;
+
+  // Key for the internal TextFormField so we can trigger validation when
+  // external things change (like the selected country).
+  final GlobalKey<FormFieldState<String>> _fieldKey =
+      GlobalKey<FormFieldState<String>>();
 
   @override
   void initState() {
@@ -197,9 +207,7 @@ class _EphoneFieldState extends State<EPhoneField> {
       final currentText = _controller.text;
       final currentLength = currentText.length;
 
-      if (widget.keyboardTypeOverride == null) {
-        _updateTextFieldType(); // only auto-update if no manual override
-      }
+      _updateTextFieldType();
 
       // If requested, lose focus when the user types the first character
       // (transition from length 0 -> 1).
@@ -227,6 +235,10 @@ class _EphoneFieldState extends State<EPhoneField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      key: _fieldKey,
+      // Use the caller override if provided; otherwise use the keyboard type
+      // for the current field type so switching to email mode uses an
+      // email-optimized keyboard layout.
       keyboardType: widget.keyboardTypeOverride ?? _type.keyboardType,
       controller: _controller,
       focusNode: _focusNode,
@@ -242,29 +254,35 @@ class _EphoneFieldState extends State<EPhoneField> {
       ),
       // initialValue: widget.initialValue,
       decoration: widget.decoration.copyWith(
-          prefixIcon: _buildCountryPicker(_type == EphoneFieldType.phone),
+          // Hide the country picker when the field is in email mode.
+          prefixIcon:
+              _type == EphoneFieldType.email || _type == EphoneFieldType.initial
+                  ? null
+                  : _buildCountryPicker(),
           labelText: _type.labelText(widget.emptyLabelText,
               widget.emailLabelText, widget.phoneLabelText)),
-      validator: _type.validator(
-        _selectedValidatorForType(),
-        _selectedCountry,
-        widget.phoneNumberMaskSplitter,
-      ),
+      validator:
+          _type.validator(_selectedValidatorForType(), _selectedCountry, null),
+      // Make sure the phone/email-aware formatter receives the configured
+      // mask splitter so switching to email updates formatters correctly.
       inputFormatters: widget.inputFormatters ??
           _type.inputFormatters(
               _selectedCountry, widget.phoneNumberMaskSplitter),
     );
   }
 
-  /// Builds the [CountryPickerButton] if the [_type] is [EphoneFieldType.phone].
-  Widget? _buildCountryPicker(bool isPhoneFieldSelected) {
-    return isPhoneFieldSelected
-        ? CountryPickerButton(
+  /// Builds the [CountryPickerButton].
+  /// Note: country picker is retained but not tied to a "phone" mode.
+  Widget? _buildCountryPicker() {
+    return CountryPickerButton(
       initialValue: _selectedCountry,
       onValuePicked: (Country country) {
         setState(() {
           _selectedCountry = country;
           widget.onCountryChanged?.call(country);
+          // Re-run validation for the field whenever the country changes so
+          // validators that depend on the selected country get evaluated.
+          _fieldKey.currentState?.validate();
           _focusNode.requestFocus();
         });
       },
@@ -277,43 +295,34 @@ class _EphoneFieldState extends State<EPhoneField> {
       width: widget.countryPickerButtonWidth,
       icon: widget.countryPickerButtonIcon,
       pickerHeight: widget.pickerHeight,
-    )
-        : null;
+    );
   }
 
   /// Updates the [_type] of the input field based on the [_controller] text.
   void _updateTextFieldType() {
-    String text = _controller.text;
-    if (widget.phoneNumberMaskSplitter != null) {
-      text = text.replaceAll(widget.phoneNumberMaskSplitter!, '');
-    }
+    // Behavior: if the field contains any alphabetic character or email-like
+    // symbol (such as @ . _ - +) we treat it as an email field. Empty text
+    // falls back to the initialType.
+    final String text = _controller.text;
 
-    final bool startsWithDigit = text.startsWith(RegExp(r'\d'));
-    final bool containsAt = text.contains('@');
-
-    EphoneFieldType newType;
     if (text.isEmpty) {
-      newType = widget.initialType;
-    } else if (startsWithDigit && !containsAt) {
-      // If the input begins with a digit and does not contain an email signifier,
-      // treat it as a phone number regardless of any subsequent characters.
-      newType = EphoneFieldType.email;
-    } else if (containsAt || int.tryParse(text) == null) {
-      newType = EphoneFieldType.email;
-    } else {
-      newType = EphoneFieldType.email;
+      final EphoneFieldType newType = widget.initialType;
+      if (newType != _type) {
+        setState(() {
+          _type = newType;
+        });
+      }
+      return;
     }
 
-    if (newType == EphoneFieldType.email && startsWithDigit) {
-      final String numericOnly = text/*.replaceAll(RegExp(r'\D'), '')*/;
-      if (numericOnly != _controller.text) {
-        _controller.value = TextEditingValue(
-          text: numericOnly,
-          selection: TextSelection.collapsed(offset: numericOnly.length),
-        );
-        text = numericOnly;
-      }
-    }
+    // Explicit checks: letters OR email symbols trigger email mode. Digits alone do not.
+    final bool hasLetter = RegExp(r'[A-Za-z]').hasMatch(text);
+    final bool hasEmailSymbol = RegExp(r'[@._\-+]').hasMatch(text);
+
+    final bool shouldBeEmail = hasLetter || hasEmailSymbol;
+
+    final EphoneFieldType newType =
+        shouldBeEmail ? EphoneFieldType.email : EphoneFieldType.initial;
 
     if (newType != _type) {
       setState(() {
@@ -328,27 +337,13 @@ class _EphoneFieldState extends State<EPhoneField> {
         return widget.emptyErrorText == null
             ? null
             : (value) =>
-        value == null || value.isEmpty ? widget.emptyErrorText : null;
+                value == null || value.isEmpty ? widget.emptyErrorText : null;
       case EphoneFieldType.email:
-      // Wrap any provided emailValidator to also enforce:
-      // - If the value looks like an email (contains '@') and starts with a digit,
-      //   return an error.
-      // - Otherwise, fall back to the user-provided emailValidator if present.
-        return (value) {
-          if (value != null && value.isNotEmpty && value.contains('@')) {
-            if (RegExp(r'^\d').hasMatch(value)) {
-              return 'Email must not start with a number';
-            }
-          }
-
-          if (widget.emailValidator != null) {
-            return widget.emailValidator!(value);
-          }
-
-          return null;
-        };
+        // Use any provided emailValidator directly. Emails starting with digits
+        // are allowed (e.g., "123user@example.com").
+        return widget.emailValidator;
       case EphoneFieldType.phone:
-        return widget.phoneValidator;
+        return widget.emailValidator;
     }
   }
 }
