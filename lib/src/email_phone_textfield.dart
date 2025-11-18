@@ -252,7 +252,7 @@ class _EphoneFieldState extends State<EPhoneField> {
       // initialValue: widget.initialValue,
       decoration: widget.decoration.copyWith(
           // Hide the country picker when the field is in email mode.
-          prefixIcon: _type == EphoneFieldType.email ? null : _buildCountryPicker(),
+          prefixIcon: _type == EphoneFieldType.email || _type == EphoneFieldType.initial? null : _buildCountryPicker(),
           labelText: _type.labelText(widget.emptyLabelText, widget.emailLabelText, widget.phoneLabelText)),
       validator: _type.validator(_selectedValidatorForType(), _selectedCountry, null),
       // Make sure the phone/email-aware formatter receives the configured
